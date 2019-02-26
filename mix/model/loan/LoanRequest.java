@@ -9,27 +9,24 @@ import java.io.Serializable;
  * request that a client submits to get a loan.
  *
  */
-public class LoanRequest implements Serializable {
+public class LoanRequest {
 
     private int ssn; // unique client number.
     private int amount; // the ammount to borrow
     private int time; // the time-span of the loan
-    private int id;
 
     public LoanRequest() {
         super();
         this.ssn = 0;
         this.amount = 0;
         this.time = 0;
-        this.id = 0;
     }
 
-    public LoanRequest(int ssn, int amount, int time, int id) {
+    public LoanRequest(int ssn, int amount, int time) {
         super();
         this.ssn = ssn;
         this.amount = amount;
         this.time = time;
-        this.id = id;
     }
 
     public int getSsn() {
@@ -55,8 +52,6 @@ public class LoanRequest implements Serializable {
     public void setTime(int time) {
         this.time = time;
     }
-
-    public int getId(){ return id;}
 
     @Override
     public String toString() {

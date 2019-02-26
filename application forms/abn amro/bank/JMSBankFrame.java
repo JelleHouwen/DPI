@@ -5,6 +5,8 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -15,34 +17,29 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
-
-import Gateways.BankGateway;
-
-import messaging.requestreply.QueueTypes;
 import model.bank.*;
 import messaging.requestreply.RequestReply;
 
 public class JMSBankFrame extends JFrame {
 
-    /**
-     *
-     */
     private static final long serialVersionUID = 1L;
     private JPanel contentPane;
     private JTextField tfReply;
     private DefaultListModel<RequestReply<BankInterestRequest, BankInterestReply>> listModel = new DefaultListModel<RequestReply<BankInterestRequest, BankInterestReply>>();
-    private BankGateway gateway;
 
-    /**
-     * Launch the application.
-     */
+    private LoanBrokerAppGateway brokerGateway;
+
     public static void main(String[] args) {
         EventQueue.invokeLater(new Runnable() {
             public void run() {
                 try {
-                    JMSBankFrame abnFrame = new JMSBankFrame();
-                    abnFrame.setVisible(true);
+                    JMSBankFrame frame = new JMSBankFrame("ABN AMRO");
+                    JMSBankFrame frame1 = new JMSBankFrame("RABO");
+                    JMSBankFrame frame2 = new JMSBankFrame("ING");
 
+                    frame.setVisible(true);
+                    frame2.setVisible(true);
+                    frame1.setVisible(true);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -53,8 +50,15 @@ public class JMSBankFrame extends JFrame {
     /**
      * Create the frame.
      */
-    public JMSBankFrame(  ){
-        setTitle("ABN AMBRO");
+    public JMSBankFrame(String bankName) {
+
+        brokerGateway = new LoanBrokerAppGateway(bankName) {
+            @Override
+            public void onBankRequestArrived(BankInterestRequest request) {
+                listModel.addElement(new RequestReply<>(request, null));
+            }
+        };
+        setTitle(bankName);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setBounds(100, 100, 450, 300);
         contentPane = new JPanel();
@@ -76,7 +80,7 @@ public class JMSBankFrame extends JFrame {
         gbc_scrollPane.gridy = 0;
         contentPane.add(scrollPane, gbc_scrollPane);
 
-        final JList<RequestReply<BankInterestRequest, BankInterestReply>> list = new JList<RequestReply<BankInterestRequest, BankInterestReply>>(listModel);
+        JList<RequestReply<BankInterestRequest, BankInterestReply>> list = new JList<RequestReply<BankInterestRequest, BankInterestReply>>(listModel);
         scrollPane.setViewportView(list);
 
         JLabel lblNewLabel = new JLabel("type reply");
@@ -102,11 +106,12 @@ public class JMSBankFrame extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 RequestReply<BankInterestRequest, BankInterestReply> rr = list.getSelectedValue();
                 double interest = Double.parseDouble((tfReply.getText()));
-                BankInterestReply reply = new BankInterestReply(interest, QueueTypes.BankReply.toString(),rr.getRequest().getId());
-                if (rr!= null && reply != null){
+                BankInterestReply reply = new BankInterestReply(interest, bankName);
+                if (rr != null && reply != null) {
                     rr.setReply(reply);
-                    gateway.SendMessage(reply, QueueTypes.BankReply.toString());
                     list.repaint();
+                    System.out.println("Bank sending BankInterestReply to Broker: " + String.valueOf(interest));
+                    brokerGateway.sendBankReply(rr.getRequest(), rr.getReply());
                 }
             }
         });
@@ -115,11 +120,6 @@ public class JMSBankFrame extends JFrame {
         gbc_btnSendReply.gridx = 4;
         gbc_btnSendReply.gridy = 1;
         contentPane.add(btnSendReply, gbc_btnSendReply);
-        gateway = new BankGateway(this);
-
     }
 
-    public void addRequest(BankInterestRequest request){
-        listModel.addElement(new RequestReply<BankInterestRequest, BankInterestReply>(request,null));
-    }
 }
